@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>여행정보페이지</title>
+</head>
+<body>
+    <h1>여행지 소개 및 1박 2일 여행 코스</h1>
+
+    <form id="tourForm" method="post">
+        {% csrf_token %}
+        <input type="text" id="placeInput" name="place" placeholder="가고 싶은 여행지를 입력하세요 (예: 경주)" required>
+        <button type="submit">검색</button>
+    </form>
+    <div style="margin-top: 8px;">
+        <span>추천 여행지: </span>
+        <button type="button" class="quick-place" data-place="경주">경주</button>
+        <button type="button" class="quick-place" data-place="내장산">내장산</button>
+        <button type="button" class="quick-place" data-place="설악산">설악산</button>
+    </div>
+
+    <p id="statusMsg"></p>
+
+    <div id="resultArea" style="display: none;">
+        <hr>
+        <h2 id="introTitle">여행지 소개</h2>
+        <pre id="introBox" style="white-space: pre-wrap; font-family: inherit;"></pre>
+
+        <h2 id="courseTitle">1박 2일 여행 코스</h2>
+        <pre id="courseBox" style="white-space: pre-wrap; font-family: inherit;"></pre>
+    </div>
+
+    <script>
+        const form = document.getElementById("tourForm");
+        const placeInput = document.getElementById("placeInput");
+        const statusMsg = document.getElementById("statusMsg");
+        const resultArea = document.getElementById("resultArea");
+        const introTitle = document.getElementById("introTitle");
+        const introBox = document.getElementById("introBox");
+        const courseTitle = document.getElementById("courseTitle");
+        const courseBox = document.getElementById("courseBox");
+        const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+        document.querySelectorAll(".quick-place").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                placeInput.value = btn.dataset.place;
+                form.requestSubmit();
+            });
+        });
+
+        form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const place = placeInput.value.trim();
+            if (!place) {
+                statusMsg.textContent = "여행지를 입력하셔야 검색이 가능합니다.";
+                return;
+            }
+
+            statusMsg.textContent = "여행지 소개와 1박 2일 여행 코스를 불러오는 중입니다...";
+            resultArea.style.display = "none";
+
+            try {
+                const response = await fetch("", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken
+                    },
+                    body: JSON.stringify({ place: place })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    statusMsg.textContent = data.error || "요청 처리에 실패했습니다.";
+                    return;
+                }
+
+                statusMsg.textContent = "";
+                introTitle.textContent = `${data.place} 소개 (직접 전달 내용)`;
+                introBox.textContent = data.intro;
+
+                courseTitle.textContent = `${data.place} 여행 1박 2일 코스 (GPT 검색 내용)`;
+                courseBox.textContent = data.course;
+
+                resultArea.style.display = "block";
+            } catch (err) {
+                statusMsg.textContent = `통신 오류가 발생했습니다: ${err}`;
+            }
+        });
+    </script>
+</body>
+</html>
